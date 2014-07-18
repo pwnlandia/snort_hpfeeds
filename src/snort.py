@@ -10,36 +10,20 @@ class Alert(object):
     """
     def __init__(self, sensor_uuid, *args):
         self.sensor = sensor_uuid
-        if len(args) == 8: # ICMP
+        if len(args) == 10: 
             self.header = args[0]
             self.signature = args[1]
             self.classification = args[2]
             self.priority = args[3]
             # Alert logs don't include year. Creating a datime object
             # with current year.
-            date = datetime.strptime(args[4], '%m/%d-%H:%M:%S.%f')
-            self.date = datetime(
-                    datetime.now().year, date.month, date.day,
-                    date.hour, date.minute, date.second, date.microsecond)
+            self.date = datetime.strptime(args[4], '%m/%d/%y-%H:%M:%S.%f')
             self.source_ip = args[5]
-            self.destination_ip = args[6]
-            self.proto = args[7]
-            
-        elif len(args) == 10: # TCP or UDP
-            self.header = args[0]
-            self.signature = args[1]
-            self.classification = args[2]
-            self.priority = args[3]
-            # Alert logs don't include year. Creating a datime object
-            # with current year.
-            date = datetime.strptime(args[4], '%m/%d-%H:%M:%S.%f')
-            self.date = datetime(
-                    datetime.now().year, date.month, date.day,
-                    date.hour, date.minute, date.second, date.microsecond)
-            self.source_ip = args[5]
-            self.source_port = args[6]
+            if args[6]:
+                self.source_port = args[6]
             self.destination_ip = args[7]
-            self.destination_port = args[8]
+            if args[8]:
+                self.destination_port = args[8]
             self.proto = args[9]
         else:
             raise ValueError("Unexpected number of attributes.")
@@ -78,16 +62,16 @@ class Alert(object):
             + pyp.Suppress("]")
         )
         signature = (
-            pyp.Combine(pyp.SkipTo("[**]", include=False))
+            pyp.Combine(pyp.SkipTo("[**]", include=False)) + pyp.Suppress("[**]")
         )
         classif = (
-            pyp.Suppress("[**]")
-            + pyp.Suppress(pyp.Optional(pyp.Literal("[Classification:")))
-            + pyp.Regex("[^]]*") + pyp.Suppress(']')
+            pyp.Suppress(pyp.Literal("[Classification:")) + pyp.Regex("[^]]*") + pyp.Suppress(']')
         )
         pri = pyp.Suppress("[Priority:") + integer + pyp.Suppress("]")
         date = pyp.Combine(
-            integer + "/" + integer + '-' + integer + ':' + integer + ':' + integer + '.' + integer
+            # day/month/year (year is optional, depends on snort being started with -y)
+            integer + "/" + integer + pyp.Optional(pyp.Combine("/" + integer), default="/"+str(datetime.now().year)[2:4]) + \
+            '-' + integer + ':' + integer + ':' + integer + '.' + integer
         )
         src_ip = ip_addr 
         src_port = port 
@@ -96,8 +80,9 @@ class Alert(object):
         dest_port = port
         proto = pyp.Regex("\S+")
 
-        bnf = header + signature + classif + pri + date + \
-            src_ip + pyp.Optional(src_port) + arrow + dest_ip + pyp.Optional(dest_port) + proto
+        bnf = header + signature + pyp.Optional(classif, default='') + pri + date + \
+            src_ip + pyp.Optional(src_port, default='') + arrow + dest_ip + \
+            pyp.Optional(dest_port, default='') + proto
 
         fields = bnf.searchString(buf)
         if fields:
@@ -107,13 +92,6 @@ class Alert(object):
                 # the delta between local time and UTC and uses it to convert
                 # the logged time to UTC. Additional time formatting  makes
                 # sure the previous code doesn't break.
-                date = datetime.strptime(fields[0][4], '%m/%d-%H:%M:%S.%f')
-                date = datetime(
-                   datetime.now().year, date.month, date.day,
-                   date.hour, date.minute, date.second, date.microsecond)
-                toutc = datetime.utcnow() - datetime.now()
-                date = date + toutc
-                fields[0][4] = date.strftime('%m/%d-%H:%M:%S.%f')
                 fields[0] = [f.strip() for f in fields[0]]
             return cls(sensor_uuid, *fields[0])
         else:
