@@ -3,4 +3,4 @@ pyparsing
 requests
 sqlalchemy
 watchdog
--e git+https://github.com/threatstream/hpfeeds.git#egg=hpfeeds-dev
+-e git+https://github.com/Pwnlandia/hpfeeds.git#egg=hpfeeds-dev
