@@ -6,9 +6,7 @@ setup(
 	name='snort_hpfeeds',
 	version='1.0',
 	description='snort_hpfeeds',
-	author='Jason Trost, Sergio Pulgarin',
-	author_email='jason.trost@threatstream, sergio@threatstream.com',
-	url='https://github.com/threatstream/snort_hpfeeds',
+	url='https://github.com/Pwnlandia/snort_hpfeeds',
 	license='GPLv3',
 	package_dir = {'': 'src'},
 	py_modules = ['snort_hpfeeds'],
@@ -22,6 +20,6 @@ setup(
 		"hpfeeds==1.0"		
 	],
 	dependency_links=[
-		"git+https://github.com/threatstream/hpfeeds.git#egg=hpfeeds-1.0"
+		"git+https://github.com/Pwnlandia/hpfeeds.git#egg=hpfeeds-1.0"
 	]
 )
